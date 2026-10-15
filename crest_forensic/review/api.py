@@ -121,7 +121,7 @@ def login(body: LoginIn, request: Request, response: Response, session=Depends(d
         session.rollback()
         raise HTTPException(exc.status, str(exc))
     response.set_cookie(COOKIE, token, httponly=True, samesite="lax", max_age=auth.SESSION_HOURS * 3600, path="/",
-                        secure=request.url.scheme == "https")
+                        secure=request.url.scheme == "https" or os.environ.get("CREST_COOKIE_SECURE") == "1")   # behind an HTTPS proxy the API itself sees http
     return {"username": user.username, "display_name": user.display_name, "role": user.role}
 
 

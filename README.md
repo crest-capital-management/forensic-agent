@@ -73,3 +73,8 @@ Rules enforced in `crest_forensic/review/service.py`: reviews are append-only; a
 ## Not built yet
 
 J1-13 (no source for filing dates), J1-08 (no formula in the plan), a combined M-score (needs approved weights), Phase 4 review app, Jobs 2-4, golden datasets beyond TCS.
+
+## Database
+
+The tool runs on a SQLite file on one PC (the default, `DATABASE_URL=sqlite:///./crest_forensic.db`) and on **PostgreSQL** on a company server.
+For the server setup, the one-time data copy (`python -m crest_forensic.cli copy-db ...`), HTTPS and backups, see [DEPLOY_POSTGRES.md](DEPLOY_POSTGRES.md).

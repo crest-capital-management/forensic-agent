@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 from dotenv import load_dotenv
 
 from crest_forensic.db.models import Base
+from crest_forensic.db.url import normalize_url
 
 load_dotenv()
 
@@ -19,7 +20,7 @@ load_dotenv()
 # access to the values within the .ini file in use.
 config = context.config
 
-db_url = os.environ.get("DATABASE_URL", "sqlite:///./crest_forensic.db")
+db_url = normalize_url(os.environ.get("DATABASE_URL", "sqlite:///./crest_forensic.db"))
 config.set_main_option("sqlalchemy.url", db_url)
 
 # Interpret the config file for Python logging.

@@ -7,10 +7,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from crest_forensic.db.models import Base
+from crest_forensic.db.url import normalize_url
 
 load_dotenv()
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./crest_forensic.db")
+DATABASE_URL = normalize_url(os.environ.get("DATABASE_URL", "sqlite:///./crest_forensic.db"))
 
 _engine = None
 _SessionLocal: sessionmaker | None = None
@@ -19,8 +20,10 @@ _SessionLocal: sessionmaker | None = None
 def get_engine():
     global _engine
     if _engine is None:
-        connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-        _engine = create_engine(DATABASE_URL, connect_args=connect_args)
+        if DATABASE_URL.startswith("sqlite"):
+            _engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+        else:   # a server database: check a pooled connection is alive before use (servers restart, firewalls drop idle links)
+            _engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=5, max_overflow=10)
     return _engine
 
 

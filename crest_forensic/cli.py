@@ -498,6 +498,24 @@ def cmd_ingest_peers(args: argparse.Namespace) -> None:
     session.commit()
 
 
+def cmd_copy_db(args: argparse.Namespace) -> None:
+    from crest_forensic.db.copy_data import copy_database
+    from crest_forensic.db.session import DATABASE_URL
+
+    source = args.source or DATABASE_URL
+    print(f"source: {source.split('@')[-1]}")
+    report = copy_database(source, args.to, check_only=args.check_only)
+    for name, n in report.counts.items():
+        print(f"  {name:28s} {n:>8,} rows")
+    for pr in report.problems:
+        print("PROBLEM:", pr)
+    if report.problems:
+        print("NOT copied." if not report.copied else "Copied, but verification failed.")
+        return
+    print("Check passed: every row fits the new database." if args.check_only else
+          f"Copied and verified: {sum(report.counts.values()):,} rows in {len(report.counts)} tables.")
+
+
 def cmd_run_screen(args: argparse.Namespace) -> None:
     session = get_session()
     company = _resolve_company(session, args.identifier)
@@ -775,6 +793,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--approved-by", required=True, help="who approved the peer set (the forensic lead)")
     p.add_argument("--note", default="")
     p.set_defaults(func=cmd_ingest_peers)
+
+    p = sub.add_parser("copy-db", help="copy the whole database to another URL (for example SQLite -> PostgreSQL); checks first, copies into an empty target")
+    p.add_argument("--to", required=True, help="target URL, e.g. postgresql://user:password@host:5432/crest")
+    p.add_argument("--from", dest="source", default=None, help="source URL (default: DATABASE_URL, the SQLite file)")
+    p.add_argument("--check-only", action="store_true", help="only check that every row would fit; copy nothing")
+    p.set_defaults(func=cmd_copy_db)
 
     p = sub.add_parser("run-screen")
     p.add_argument("identifier")
