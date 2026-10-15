@@ -111,7 +111,48 @@ The copy tool checks everything first and changes nothing in the source. It refu
 
 ## Things still to decide or do (not part of this runbook)
 
-- Per-case permissions: today every signed-in user can READ every case. Writing is already limited by role.
+- Per-case permissions are built: the forensic lead sees every case; everyone else only the cases they were added to (case page, panel "Who can open this case"). After moving to the server, the forensic lead should open each case and add the right people.
 - Who administers the server, the backup copy location, and how long data is kept.
 - The free-tier API keys (Gemini, RapidAPI) are per project; keep them in `.env` on the server only.
 - The SQLite file and its backups are NOT in GitHub. Keep the original until the new database has been used for a while.
+
+## Using a hosted PostgreSQL instead of your own server (Neon, Supabase, Aiven, a cloud provider)
+
+The app only needs the connection address, so any standard PostgreSQL works. Parts A and the server steps of this runbook are replaced by the provider's console; Parts B to D stay the same.
+
+1. Create the database in the provider's console. **Choose the region when you create it: it cannot be changed later.** Neon has no India region (nearest is Singapore); Supabase offers Mumbai.
+2. Copy the connection address into `DATABASE_URL` in `.env`. It must end in `?sslmode=require`. Prefer the DIRECT address; the pooled one also works (the app does not use server-side prepared statements).
+3. Run `init-db`, `alembic stamp head`, then `copy-db` exactly as in Parts B and C.
+4. Free plans pause an idle database, so the first request after a pause is slow. Use a paid always-on plan for real use. Check the provider's current limits and prices.
+5. Keep the connection address secret (it contains the password) and turn on the provider's automatic backups; test one restore.
+6. The app itself (API and web app) still has to run somewhere: a small rented server, or an app-hosting service. Pick one in the same region as the database to keep it fast.
+
+## Supabase (decided 2026-10-15: PostgreSQL on Supabase, Mumbai region)
+
+Supabase is a hosted PostgreSQL. We use ONLY its database (not its sign-in, storage or web API). Steps, in order:
+
+1. **Create the project** at supabase.com with the company account. Choose the region **South Asia (Mumbai)**. It cannot be changed afterwards. Set a long random **database password** and save it in the company password manager.
+2. **Get the connection string:** open the project, click **Connect**, and copy the **Session pooler** string (it works over the ordinary internet, IPv4). The "Direct connection" string is IPv6 only on the standard plan and fails on many networks. The string looks like
+   `postgresql://postgres.<project-ref>:<password>@aws-0-ap-south-1.pooler.supabase.com:5432/postgres`.
+   If the password has special characters, URL-encode them.
+3. **Put it in `.env`** as `DATABASE_URL=...` (the app adds the driver and SSL settings it needs). Never commit `.env` or share this string.
+4. **Check the connection:**
+   ```bash
+   python -m crest_forensic.cli db-check
+   ```
+   It must say `connected: postgresql`. If it says CANNOT CONNECT, re-copy the string (the usual mistakes are the password and using the Direct string).
+5. **Create the tables and mark them current:**
+   ```bash
+   python -m crest_forensic.cli init-db
+   ```
+   ```bash
+   python -m alembic stamp head
+   ```
+6. **Lock the data away from Supabase's public web API. Do not skip this.** Supabase makes tables in the `public` schema reachable through a web API by default. This command turns on row-level security and takes that access away, so the data is reachable only through this app:
+   ```bash
+   python -m crest_forensic.cli harden-postgres
+   ```
+   Run it again after every `alembic upgrade head`. As a second lock, in the Supabase dashboard open **Project Settings, Data API** and turn the Data API off if the option is offered.
+7. **Copy the existing data** from the PC (Part C of this runbook): `copy-db --check-only` first, then `copy-db`.
+8. **Backups and plan.** Check what the plan includes: free projects may pause when idle and may have no daily backups. For real use choose a paid plan with daily backups, and test one restore. Also keep a periodic `pg_dump` copy off Supabase.
+9. **Where the app runs.** Supabase holds only the database. The Python API and the web app still need a host in the same region (Mumbai) so they stay fast and the data stays in India.

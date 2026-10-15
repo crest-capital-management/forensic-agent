@@ -71,8 +71,20 @@ def as_utc(value):
     return value
 
 
+def _orphans(conn, report: CopyReport) -> None:
+    """SQLite does not enforce foreign keys; PostgreSQL does. A row that points at a parent that no longer exists would stop the copy."""
+    for table in Base.metadata.sorted_tables:
+        for fk in table.foreign_keys:
+            child, parent = fk.parent, fk.column
+            n = conn.execute(select(func.count()).select_from(table).where(
+                child.is_not(None), child.not_in(select(parent)))).scalar()
+            if n and len(report.problems) < MAX_PROBLEMS:
+                report.problems.append(f"{table.name}.{child.name}: {n} row(s) point at a {parent.table.name} row that does not exist")
+
+
 def preflight(source: Engine, report: CopyReport) -> None:
     with source.connect() as conn:
+        _orphans(conn, report)
         for table in Base.metadata.sorted_tables:
             n = 0
             for row in conn.execute(select(table)).mappings():

@@ -117,6 +117,9 @@ def create_case(session: Session, user: AppUser, company_id: int, years: list[st
                 is_portfolio_company=is_portfolio_company, created_by=user.username, name=name)
     session.add(case)
     session.flush()
+    from crest_forensic.review import access
+    access.add_member_row(session, case.id, user.username, user.username)      # the person who opens a case is its first member
+    session.flush()
     return case
 
 
@@ -227,9 +230,15 @@ def case_page(session: Session, case_id: int) -> dict:
     }
 
 
-def list_cases(session: Session) -> list[dict]:
+def list_cases(session: Session, user: AppUser | None = None) -> list[dict]:
+    """Newest first. With a user: only the cases that user may open (see review/access.py)."""
+    from crest_forensic.review import access
+
+    allowed = None if user is None else access.accessible_case_ids(session, user)
     out = []
     for case in session.execute(select(Case).order_by(Case.id.desc())).scalars():
+        if allowed is not None and case.id not in allowed:
+            continue
         page = case_page(session, case.id)
         escalated = any(f["escalation"] and f["escalation"]["state"] in ("escalated", "awaiting_adviser")
                         for f in page["flags"])
@@ -348,6 +357,9 @@ def ensure_default_users(session: Session) -> None:
 
 def home(session: Session, user: AppUser) -> list[dict]:
     """Home screen: one row per company, with its flag counts from the newest run of each basis."""
+    from crest_forensic.review import access
+
+    allowed = access.accessible_case_ids(session, user)
     watched = {w.company_id for w in session.execute(
         select(WatchlistItem).where(WatchlistItem.username == user.username)).scalars()}
     rows = []
@@ -357,7 +369,8 @@ def home(session: Session, user: AppUser) -> list[dict]:
         for run in runs:
             for f in session.execute(select(Flag).where(Flag.run_id == run.id)).scalars():
                 counts[f.severity] = counts.get(f.severity, 0) + 1
-        cases = session.execute(select(Case).where(Case.company_id == c.company_id).order_by(Case.id.desc())).scalars().all()
+        cases = [k for k in session.execute(select(Case).where(Case.company_id == c.company_id).order_by(Case.id.desc())).scalars().all()
+                 if k.id in allowed]                                 # only the cases this user may open
         rows.append({
             "company_id": c.company_id, "type": "Stock", "symbol": c.nse_symbol or c.sc_id or "", "name": c.name,
             "sector": c.sector, "supported_status": c.supported_status,

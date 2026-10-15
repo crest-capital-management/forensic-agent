@@ -213,11 +213,12 @@ def _http_setup(client, session, company, flag):
 
 def test_memo_flow_over_http_with_roles_and_word_export(client, session, company, flag):
     cid, h = _http_setup(client, session, company, flag)
-    assert client.post(f"/api/cases/{cid}/memos", headers={"X-User": "partner1"}, json={"owner": "owner1"}).status_code == 403
+    assert client.post(f"/api/cases/{cid}/memos", headers={"X-User": "partner1"}, json={"owner": "owner1"}).status_code == 404      # not a member: the case is not visible to a partner
     assert client.post(f"/api/cases/{cid}/memos", headers=h, json={"owner": "adviser1"}).status_code == 400
     r = client.post(f"/api/cases/{cid}/memos", headers=h, json={"owner": "owner1", "scope_note": "receivables"})
     assert r.status_code == 200 and r.json()["status"] == "draft"
     mid = r.json()["id"]
+    assert client.get(f"/api/cases/{cid}", headers={"X-User": "owner1"}).status_code == 200      # drafting a memo gives its owner access to the case
     assert {o["username"] for o in client.get("/api/memo-owners", headers=h).json()} == {"lead1", "owner1"}
     assert client.get(f"/api/cases/{cid}/memos", headers=h).json()[0]["id"] == mid
     owner = {"X-User": "owner1"}

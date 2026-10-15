@@ -81,3 +81,24 @@ def test_check_only_copies_nothing_and_a_non_empty_target_is_refused(tmp_path):
     assert copy_database(src, dst).verified
     again = copy_database(src, dst)
     assert not again.copied and any("already holds rows" in p for p in again.problems)
+
+
+def test_a_row_pointing_at_a_missing_parent_is_reported_before_any_copy(tmp_path):
+    from sqlalchemy import text
+
+    src, dst = _url(tmp_path, "a.db"), _url(tmp_path, "b.db")
+    engine = _seed(src)
+    with engine.begin() as c:
+        c.execute(text("INSERT INTO shareholding (company_id, snapshot_id, quarter, retrieved_at) VALUES (999, 888, 'Q1FY2027', '2026-10-15 00:00:00')"))
+    rep = copy_database(src, dst)
+    assert not rep.ok() and not rep.copied and any("does not exist" in p for p in rep.problems)
+
+
+def test_db_check_reports_tables_and_harden_does_nothing_on_sqlite(tmp_path):
+    from crest_forensic.db.admin import db_check, harden
+
+    url = _url(tmp_path, "a.db")
+    engine = _seed(url)
+    info = db_check(engine)
+    assert info["dialect"] == "sqlite" and info["tables_present"] == info["tables_expected"] and not info["missing"] and info["alembic_version"] is None
+    assert harden(engine) == ["not a PostgreSQL database: nothing to do"]

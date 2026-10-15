@@ -504,7 +504,12 @@ def cmd_copy_db(args: argparse.Namespace) -> None:
 
     source = args.source or DATABASE_URL
     print(f"source: {source.split('@')[-1]}")
-    report = copy_database(source, args.to, check_only=args.check_only)
+    target = args.to or DATABASE_URL
+    if target == source:
+        print("The source and the target are the same database: give --from sqlite:///./crest_forensic.db")
+        return
+    print(f"target: {target.split('@')[-1]}")
+    report = copy_database(source, target, check_only=args.check_only)
     for name, n in report.counts.items():
         print(f"  {name:28s} {n:>8,} rows")
     for pr in report.problems:
@@ -514,6 +519,30 @@ def cmd_copy_db(args: argparse.Namespace) -> None:
         return
     print("Check passed: every row fits the new database." if args.check_only else
           f"Copied and verified: {sum(report.counts.values()):,} rows in {len(report.counts)} tables.")
+
+
+def cmd_db_check(args: argparse.Namespace) -> None:
+    from crest_forensic.db.admin import db_check
+    from crest_forensic.db.session import get_engine
+
+    try:
+        info = db_check(get_engine())
+    except Exception as exc:
+        print(f"CANNOT CONNECT: {type(exc).__name__}: {str(exc).splitlines()[0][:200]}")
+        return
+    print(f"connected: {info['dialect']}, {info['server'][:90]}")
+    print(f"tables: {info['tables_present']} of {info['tables_expected']} present; migration stamp: {info['alembic_version']}")
+    if info["missing"]:
+        print("missing:", ", ".join(info["missing"][:8]), "..." if len(info["missing"]) > 8 else "")
+        print("-> run: python -m crest_forensic.cli init-db   then   python -m alembic stamp head")
+
+
+def cmd_harden_postgres(args: argparse.Namespace) -> None:
+    from crest_forensic.db.admin import harden
+    from crest_forensic.db.session import get_engine
+
+    for line in harden(get_engine()):
+        print(line)
 
 
 def cmd_run_screen(args: argparse.Namespace) -> None:
@@ -795,10 +824,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_ingest_peers)
 
     p = sub.add_parser("copy-db", help="copy the whole database to another URL (for example SQLite -> PostgreSQL); checks first, copies into an empty target")
-    p.add_argument("--to", required=True, help="target URL, e.g. postgresql://user:password@host:5432/crest")
+    p.add_argument("--to", default=None, help="target URL (default: DATABASE_URL from .env, so the password never has to be typed on the command line)")
     p.add_argument("--from", dest="source", default=None, help="source URL (default: DATABASE_URL, the SQLite file)")
     p.add_argument("--check-only", action="store_true", help="only check that every row would fit; copy nothing")
     p.set_defaults(func=cmd_copy_db)
+
+    sub.add_parser("db-check", help="test the connection in DATABASE_URL and report the tables").set_defaults(func=cmd_db_check)
+    sub.add_parser("harden-postgres", help="PostgreSQL only: turn on row-level security and lock out the public web API roles (run after init-db and after every upgrade)").set_defaults(func=cmd_harden_postgres)
 
     p = sub.add_parser("run-screen")
     p.add_argument("identifier")

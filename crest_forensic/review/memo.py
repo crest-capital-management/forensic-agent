@@ -358,6 +358,8 @@ def create_memo(session: Session, user: AppUser, case_id: int, owner: str, scope
     session.flush()
     company = session.get(Company, case.company_id)
     memo.reference = f"CREST-{_symbol(company)}-{dt.date.today().year}-{memo.id:03d}"
+    from crest_forensic.review import access
+    access.add_member_row(session, case.id, owner, user.username)       # the memo's owner must be able to open the case
     _save_version(session, memo, user, "generated", content, fp, "First draft generated from the accepted flags.")
     return get_memo(session, user, memo.id)
 
@@ -441,10 +443,15 @@ def list_memos(session: Session, case_id: int) -> list[dict]:
     return out
 
 
-def list_all(session: Session) -> list[dict]:
-    """Every memo across all cases, newest first (for the Memos page)."""
+def list_all(session: Session, user: AppUser | None = None) -> list[dict]:
+    """Every memo of the cases the user may open, newest first (for the Memos page)."""
+    from crest_forensic.review import access
+
+    allowed = None if user is None else access.accessible_case_ids(session, user)
     out = []
     for m in session.execute(select(Memo).order_by(Memo.id.desc())).scalars():
+        if allowed is not None and m.case_id not in allowed:
+            continue
         case = session.get(Case, m.case_id)
         company = session.get(Company, case.company_id) if case else None
         vs = _versions(session, m.id)

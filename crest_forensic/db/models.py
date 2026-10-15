@@ -605,3 +605,19 @@ class PeerLink(Base):
     approved_by: Mapped[str] = mapped_column(String(120))
     approved_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class CaseMember(Base):
+    """Who may open a case besides the forensic lead (who sees every case). Append-only: removing someone sets removed_at, so the
+    record of who had access and when is kept."""
+
+    __tablename__ = "case_members"
+    __table_args__ = {"sqlite_autoincrement": True}
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    case_id: Mapped[int] = mapped_column(ForeignKey("cases.id"), index=True)
+    username: Mapped[str] = mapped_column(String(60), index=True)
+    added_by: Mapped[str] = mapped_column(String(60))
+    added_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    removed_by: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    removed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

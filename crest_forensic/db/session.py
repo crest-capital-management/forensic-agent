@@ -23,7 +23,8 @@ def get_engine():
         if DATABASE_URL.startswith("sqlite"):
             _engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
         else:   # a server database: check a pooled connection is alive before use (servers restart, firewalls drop idle links)
-            _engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=5, max_overflow=10)
+            # prepare_threshold=None: no server-side prepared statements, so a connection POOLER in front of the database (Neon, Supabase, pgbouncer) cannot break it
+            _engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=5, max_overflow=10, connect_args={"prepare_threshold": None, "connect_timeout": 10})
     return _engine
 
 

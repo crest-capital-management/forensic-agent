@@ -11,6 +11,7 @@ import Loader from "@/components/Loader";
 import { EscTag, ReviewTag, Sev, Tag } from "@/components/Badges";
 import MemoSection from "@/components/MemoSection";
 import TypologySection from "@/components/TypologySection";
+import AccessPanel from "@/components/AccessPanel";
 
 export default function CasePage() {
   const { id } = useParams<{ id: string }>();
@@ -150,6 +151,8 @@ export default function CasePage() {
         ))}
         {flags.length === 0 && <p className="muted">No flags match these filters.</p>}
       </div>
+
+      <AccessPanel caseId={id} />
 
       <TypologySection caseId={id} companyId={c.company_id} role={role} closed={!!c.closure} />
 

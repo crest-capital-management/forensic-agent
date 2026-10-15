@@ -26,6 +26,7 @@ from crest_forensic.review import memo_export
 from crest_forensic.review import memo_pdf
 from crest_forensic.review import narrative as nar
 from crest_forensic.review import config_service as cfg
+from crest_forensic.review import access
 from crest_forensic.review import service as svc
 from crest_forensic.typology import match as typ
 
@@ -193,6 +194,26 @@ def user_active(username: str, body: ActiveIn, session=Depends(db), user: AppUse
     return {"username": out.username, "active": out.active}
 
 
+def access_guard(request: Request, session=Depends(db)) -> None:
+    """Runs for EVERY route. When the URL names a case, a memo, a scheme match or an escalation, the signed-in user must be allowed to open
+    that case (review/access.py); otherwise the answer is 404, the same as for a case that does not exist."""
+    pp = request.path_params
+    for kind in ("case_id", "memo_id", "match_id", "escalation_id"):
+        if kind in pp:
+            user = current_user(request, request.headers.get("x-user"), session)
+            cid = access.case_id_of(session, kind, int(pp[kind]))
+            if cid is None:
+                raise HTTPException(404, "Not found.")
+            try:
+                access.ensure_access(session, user, cid)
+            except svc.RuleError as exc:
+                raise HTTPException(exc.status, str(exc))
+            return
+
+
+app.router.dependencies.append(Depends(access_guard))     # added before any route, so every route below is covered
+
+
 class WatchIn(BaseModel):
     company_id: int
     watch: bool
@@ -216,7 +237,7 @@ def companies(session=Depends(db), user: AppUser = Depends(current_user)):
 
 @app.get("/api/cases")
 def cases(session=Depends(db), user: AppUser = Depends(current_user)):
-    return svc.list_cases(session)
+    return svc.list_cases(session, user)
 
 
 @app.post("/api/cases")
@@ -233,6 +254,25 @@ def case(case_id: int, session=Depends(db), user: AppUser = Depends(current_user
 
 class CaseReason(BaseModel):
     reason: str
+
+
+class AccessIn(BaseModel):
+    username: str
+
+
+@app.get("/api/cases/{case_id}/access")
+def case_access(case_id: int, session=Depends(db), user: AppUser = Depends(current_user)):
+    return _run(session, access.overview, user, case_id)
+
+
+@app.post("/api/cases/{case_id}/access")
+def case_access_add(case_id: int, body: AccessIn, session=Depends(db), user: AppUser = Depends(current_user)):
+    return _run(session, access.add_member, user, case_id, body.username)
+
+
+@app.post("/api/cases/{case_id}/access/remove")
+def case_access_remove(case_id: int, body: AccessIn, session=Depends(db), user: AppUser = Depends(current_user)):
+    return _run(session, access.remove_member, user, case_id, body.username)
 
 
 @app.get("/api/cases/{case_id}/status")
@@ -366,7 +406,7 @@ class MemoRegen(BaseModel):
 
 @app.get("/api/memos")
 def all_memos(session=Depends(db), user: AppUser = Depends(current_user)):
-    return _run(session, lambda s: memo_mod.list_all(s))
+    return _run(session, lambda s: memo_mod.list_all(s, user))
 
 
 @app.get("/api/memo-owners")

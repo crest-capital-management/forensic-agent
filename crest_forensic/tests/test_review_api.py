@@ -83,7 +83,7 @@ def test_ask_the_agent_over_http(client, session, company, flags, monkeypatch):
     r = client.post(f"/api/cases/{cid}/ask", headers={"X-User": "analyst1"}, json={"question": "What is the top flag?"})
     assert r.status_code == 200 and r.json()["status"] == "answered" and r.json()["sources"][0]["ref"] == f"flag:{top['id']}"
     assert len(client.get(f"/api/cases/{cid}/ask", headers={"X-User": "analyst1"}).json()) == 1
-    assert client.post(f"/api/cases/{cid}/ask", headers={"X-User": "partner1"}, json={"question": "hi"}).status_code == 403
+    assert client.post(f"/api/cases/{cid}/ask", headers={"X-User": "partner1"}, json={"question": "hi"}).status_code == 404      # not a member: the case is not visible to a partner
     # a leading question never builds or calls a model
     monkeypatch.setattr(api, "model_factory", lambda: (_ for _ in ()).throw(AssertionError("model must not be built")))
     r = client.post(f"/api/cases/{cid}/ask", headers={"X-User": "analyst1"}, json={"question": "Was this fraud?"})
