@@ -1,0 +1,303 @@
+# Job 1 check config: limits and severity rules (Build Plan section 7.4).
+# OWNED BY THE FORENSIC LEAD. Limits live here, never inside the code.
+#
+# Every value carries a `source`:
+#   spec        - a number stated in the CREST job specs (Build Plan 7.2)
+#   proposal    - a developer proposal, NOT approved. Must be replaced or
+#                 signed off by the forensic lead before production use.
+#   needs_lead  - the plan gives no number; the check reports the metric only
+#                 and never raises a flag until the lead supplies a limit.
+#
+# A run REFUSES to start unless `approval` below is filled in. For
+# development only, `run-screen --allow-draft-config` overrides that, and
+# every run and flag it produces is stamped "DRAFT CONFIG - limits not approved".
+version: 1
+owner: forensic_lead
+approval:
+  approved_by: null
+  approved_at: null
+
+# Evidence confidence is separate from severity and materiality
+# (Developer Review section 8). Computed by code from the flag's inputs:
+#   low    - any input is a derived estimate, OR inputs come from more than
+#            one provider (definitions may differ between sources)
+#   medium - all inputs sourced from one provider
+#   high   - every input confirmed by two providers that agree within tolerance
+evidence_confidence_rule_version: 1
+
+checks:
+  J1-01:
+    name: Profit vs cash
+    check_version: 1
+    rule_id: SEV-J1-01
+    metric: abs(pat - cfo) / abs(pat)
+    thresholds:
+      high:   {value: 0.40, source: proposal}
+      medium: {value: 0.20, source: spec}   # spec: "gap exceeds 20% of PAT"
+    materiality: {amount: abs(pat - cfo), base_field: revenue_from_operations, material_if_ge_pct: {value: 1.0, source: proposal}}
+
+  J1-02:
+    name: Accruals build-up (Sloan-style)
+    check_version: 1
+    rule_id: SEV-J1-02
+    metric: (pat - cfo) / average(total_assets_t, total_assets_t-1)
+    thresholds:
+      high:   {value: 0.15, source: proposal}
+      medium: {value: 0.10, source: proposal}
+    materiality: {amount: abs(pat - cfo), base_field: revenue_from_operations, material_if_ge_pct: {value: 1.0, source: proposal}}
+
+  J1-03:
+    name: Revenue vs receivables
+    check_version: 1
+    rule_id: SEV-J1-03
+    metric: receivables_growth / revenue_growth
+    thresholds:
+      high:   {value: 2.0, source: proposal}
+      medium: {value: 1.5, source: proposal}
+    # Receivables grew while revenue was flat or fell: the ratio is undefined,
+    # so a fixed severity applies instead.
+    non_positive_revenue_growth_severity: {value: medium, source: proposal}
+    materiality: {amount: "receivables above revenue-proportional level", base_field: revenue_from_operations, material_if_ge_pct: {value: 1.0, source: proposal}}
+
+  J1-04:
+    name: Revenue vs inventory
+    check_version: 1
+    rule_id: SEV-J1-04
+    metric: inventory_growth / revenue_growth
+    thresholds:
+      high:   {value: 2.0, source: proposal}
+      medium: {value: 1.5, source: proposal}
+    non_positive_revenue_growth_severity: {value: medium, source: proposal}
+    materiality: {amount: "inventory above revenue-proportional level", base_field: revenue_from_operations, material_if_ge_pct: {value: 1.0, source: proposal}}
+
+  J1-05:
+    name: Capacity mismatch
+    check_version: 1
+    rule_id: SEV-J1-05
+    metric: revenue_growth / fixed_asset_growth
+    # Defined only when BOTH grew. For service companies people, not fixed assets, are the capacity (weak lead).
+    thresholds:
+      high:   {value: 3.0, source: proposal}
+      medium: {value: 2.0, source: proposal}
+    materiality: {amount: "increase in fixed assets", base_field: revenue_from_operations, material_if_ge_pct: {value: 1.0, source: proposal}}
+
+  J1-06:
+    name: Beneish components
+    check_version: 1
+    rule_id: SEV-J1-06
+    metric: eight components (DSRI GMI AQI SGI DEPI SGAI LVGI TATA), shown individually
+    # The plan: weights, cut-off and Ind AS adaptation must be approved by the
+    # lead before any combined M-score is shown. Components only until then.
+    combined_score: {value: null, source: needs_lead}
+    thresholds: {}
+    # OPEN DECISION for the lead: the plan has no gross-profit item. Until
+    # decided, gross margin = (revenue - cost_of_materials_or_goods) / revenue
+    # and GMI is UNAVAILABLE when that cost is zero or missing (true for
+    # service companies such as TCS).
+    gross_margin_derivation: {value: "revenue minus cost_of_materials_or_goods", source: needs_lead}
+
+  J1-07:
+    name: Unusual other income
+    check_version: 1
+    rule_id: SEV-J1-07
+    metric: other_income / profit_before_tax
+    thresholds:
+      high:   {value: 0.50, source: proposal}
+      medium: {value: 0.25, source: proposal}
+    yoy_jump_threshold: {value: null, source: needs_lead}   # reported as a figure only
+    materiality: {amount: other_income, base_field: revenue_from_operations, material_if_ge_pct: {value: 1.0, source: proposal}}
+
+  J1-08:
+    name: Cost capitalisation
+    check_version: 1
+    rule_id: SEV-J1-08
+    # The plan gives only "rise in assets share versus expenses". Default (LEAD_DECISIONS 1A option B): growth of
+    # non-current assets (total assets minus current assets) divided by growth of total expenses. All values are PROPOSALS.
+    metric: non_current_asset_growth / total_expense_growth
+    thresholds:
+      high:   {value: 2.0, source: proposal}
+      medium: {value: 1.5, source: proposal}
+    non_positive_expense_growth_severity: {value: medium, source: proposal}   # expenses flat or falling while assets grew
+    materiality: {amount: "non-current assets above expense-proportional level", base_field: revenue_from_operations, material_if_ge_pct: {value: 1.0, source: proposal}}
+
+  J1-09:
+    name: Restatement
+    check_version: 1
+    rule_id: SEV-J1-09
+    metric: percent difference between two saved versions of the same figure
+    # Plan: "any difference is shown". Severity is the lead's call.
+    any_difference_severity: {value: medium, source: proposal}
+    materiality: {amount: abs(difference), base_field: revenue_from_operations, material_if_ge_pct: {value: 1.0, source: proposal}}
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 text checks (J1-10 .. J1-15). The model only points at passages;
+  # severity for each kind of passage is set HERE, by the forensic lead, not by
+  # the model. A value of null means "shown to the reviewer, never a flag".
+  # The plan gives no severities for these, so every value is a proposal.
+  # ---------------------------------------------------------------------------
+  J1-10:
+    name: Auditor's opinion
+    check_version: 1
+    rule_id: SEV-J1-10
+    metric: kind of passage in the auditor's report
+    finding_severity:
+      opinion_unmodified:                 {value: null,   source: proposal}
+      opinion_qualified:                  {value: high,   source: proposal}
+      opinion_adverse:                    {value: high,   source: proposal}
+      opinion_disclaimer:                 {value: high,   source: proposal}
+      emphasis_of_matter_paragraph:       {value: medium, source: proposal}
+      material_uncertainty_going_concern: {value: high,   source: proposal}
+      key_audit_matter:                   {value: null,   source: proposal}
+
+  J1-11:
+    name: Adverse CARO clauses
+    check_version: 1
+    rule_id: SEV-J1-11
+    metric: unfavourable answer in the CARO annexure
+    finding_severity:
+      caro_adverse_or_qualified_answer:   {value: medium, source: proposal}
+
+  J1-12:
+    name: Auditor change
+    check_version: 1
+    rule_id: SEV-J1-12
+    metric: auditor firm registration number compared between consecutive years
+    finding_severity:
+      auditor_changed:                    {value: high, source: proposal}
+      auditor_unchanged:                  {value: null, source: proposal}
+
+  J1-13:
+    name: Delayed filings
+    check_version: 1
+    rule_id: SEV-J1-13
+    # Exchange received time of each quarterly result (NSE files saved by the app) against a due date.
+    # EVERY value below is a PROPOSAL: the lead must confirm the due dates against SEBI LODR (LEAD_DECISIONS 1B).
+    metric: days after due date (negative = filed early)
+    quarterly_due_days:   {value: 45, source: proposal}   # days after the quarter end (Q1-Q3)
+    year_end_due_days:    {value: 60, source: proposal}   # days after 31 March (Q4 / full year)
+    thresholds:
+      high:   {value: 30, source: proposal}               # more than 30 days after the due date
+      medium: {value: 0,  source: proposal}               # any day after the due date
+
+  J1-14:
+    name: Related-party gaps
+    check_version: 1
+    rule_id: SEV-J1-14
+    metric: related-party disclosure with no stated pricing or terms
+    finding_severity:
+      related_party_terms_not_stated:     {value: medium, source: proposal}
+
+  J1-15:
+    name: Accounting policy and estimate changes
+    check_version: 1
+    rule_id: SEV-J1-15
+    metric: stated change of policy or estimate
+    finding_severity:
+      change_in_accounting_policy:        {value: medium, source: proposal}
+      change_in_accounting_estimate:      {value: medium, source: proposal}
+      adoption_of_new_accounting_standard: {value: null,  source: proposal}
+
+  # ---------------------------------------------------------------------------
+  # Added from the PRD overview. NOT in the original job specs, so every value
+  # is a proposal until the forensic lead confirms it.
+  # ---------------------------------------------------------------------------
+  # Job 2 (quantitative anomaly tests). The 2-point limit is stated in the Job 2 spec; severity "high" is not.
+  J2-01:
+    name: Shareholding step change
+    check_version: 1
+    rule_id: SEV-J2-01
+    metric: change in the promoter group holding between consecutive quarter-ends, in percentage points
+    thresholds:
+      high:   {value: null, source: needs_lead}
+      medium: {value: 2.0, source: spec}
+
+  J2-07:
+    name: Tax rate against peers
+    check_version: 1
+    rule_id: SEV-J2-07
+    metric: effective tax rate minus the median effective tax rate of the lead's peer set, in percentage points
+    # The Job 2 spec names tax rate vs peers but gives no number. EVERY value is a PROPOSAL for the lead. At least 3 peers with data are needed.
+    thresholds:
+      high:   {value: 10.0, source: proposal}
+      medium: {value: 5.0,  source: proposal}
+
+  J2-06:
+    name: Related-party concentration
+    check_version: 1
+    rule_id: SEV-J2-06
+    metric: revenue from related parties as a percent of revenue from operations, and purchases from related parties as a percent of total expenses
+    # The Job 2 spec names related-party concentration but gives no number. EVERY value is a PROPOSAL for the lead.
+    thresholds:
+      high:   {value: 50.0, source: proposal}
+      medium: {value: 25.0, source: proposal}
+
+  J2-05:
+    name: Year-on-year breaks in the plain ratios
+    check_version: 1
+    rule_id: SEV-J2-05
+    metric: change of each plain ratio from one year to the next (percentage points for margins, tax rate and revenue growth; percent of last year's value for days and ratios)
+    # The Job 2 spec says "year-on-year breaks flagged" but gives no number. EVERY value is a PROPOSAL for the lead.
+    pct_points_limit:   {value: 5.0,  source: proposal}     # a move of more than 5 percentage points in a margin, the tax rate or revenue growth
+    relative_limit_pct: {value: 30.0, source: proposal}     # a move of more than 30% of last year's value in receivable days, inventory days, current ratio or cash conversion
+    high_multiple:      {value: 3.0,  source: proposal}     # high when the move is more than this many times the limit
+
+  J2-04:
+    name: Promoter pledging
+    check_version: 1
+    rule_id: SEV-J2-04
+    metric: shares pledged by the promoter group, as a percent of the promoter group's shares, at each quarter-end
+    # The Job 2 spec names pledging but states no level. EVERY value is a PROPOSAL for the lead.
+    thresholds:
+      high:   {value: 20.0, source: proposal}
+      medium: {value: 5.0,  source: proposal}
+
+  J2-03:
+    name: Auditor-fee jump
+    check_version: 1
+    rule_id: SEV-J2-03
+    metric: year-on-year change in the statutory audit fee and in the total of all auditor fees, in percent
+    # The 30% jump is stated in the Job 2 spec; a severity above medium is not.
+    thresholds:
+      high:   {value: null, source: needs_lead}
+      medium: {value: 30.0, source: spec}
+
+  J2-02:
+    name: Price and volume around results
+    check_version: 1
+    rule_id: SEV-J2-02
+    metric: how unusual each quarterly result's market reaction (abnormal return, volume, run-up) is against the company's OTHER results days (z-score)
+    # The Job 2 spec names this test but states no numbers. EVERY value is a PROPOSAL for the lead.
+    estimation_window_days: {value: 100, source: proposal}   # trading days of the ordinary-day baseline (ends 10 trading days before the reaction day); shown as context
+    thresholds:
+      high:   {value: 4.0, source: proposal}                 # population z-score above 4 (reaction unusually large compared with the other results days)
+      medium: {value: 3.0, source: proposal}                 # population z-score above 3
+
+  J1-16:
+    name: Financial-stress score (Altman Z'')
+    check_version: 1
+    rule_id: SEV-J1-16
+    metric: "Altman Z'' = 3.25 + 6.56*X1 + 3.26*X2 + 6.72*X3 + 1.05*X4 (emerging-market version; X2 uses Other equity as the stand-in for retained earnings)"
+    # Published zones of the emerging-market model. The lead decides whether these suit Indian companies.
+    zones:
+      safe_above:   {value: 5.85, source: proposal}
+      stress_below: {value: 4.15, source: proposal}
+    # Which severity a zone gets. A null value means the score is shown but never raises a flag.
+    zone_severity:
+      below:   {value: high, source: proposal}
+      between: {value: null, source: proposal}
+
+  J1-17:
+    name: Digit pattern (Benford's Law)
+    check_version: 1
+    rule_id: SEV-J1-17
+    metric: mean absolute deviation between the leading-digit shares of the amounts in the statements and notes and Benford's expected shares
+    # A weak, low-confidence signal. Too few numbers and the test is skipped.
+    min_numbers: {value: 1000, source: proposal}
+    # Bands for the mean absolute deviation (Nigrini's published conformity bands).
+    mad_bands:
+      close_below:      {value: 0.006, source: proposal}
+      acceptable_below: {value: 0.012, source: proposal}
+      marginal_below:   {value: 0.015, source: proposal}
+    band_severity:
+      marginal:      {value: null, source: proposal}
+      nonconforming: {value: low,  source: proposal}

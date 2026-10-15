@@ -1,0 +1,51 @@
+# Which printed statement lines to read from an annual report PDF, and what
+# standard field each one is. Labels are matched EXACTLY as printed (after
+# normalizing quotes and spaces). `occurrence` picks the nth time that label
+# appears within the statement (0 = first), because some labels repeat, e.g.
+# "Billed" appears once under non-current and once under current receivables.
+#
+# Read by documents/statements.py with no model involved. Every figure it
+# stores cites the document, section, printed label and page.
+#
+# Verified against Documents/Test/AR_TCS_2025-2026.pdf; matching the TCS answer key
+# in tests/golden/tcs_golden.yaml is checked by `cli check-golden`.
+version: 1
+lines:
+  # --- profit and loss ---
+  - {field: revenue_from_operations,   statement: profit_and_loss, label: "Revenue from operations", semantics: flow, statement_type: income}
+  - {field: other_income,              statement: profit_and_loss, label: "Other income", semantics: flow, statement_type: income}
+  - {field: total_expenses,            statement: profit_and_loss, label: "TOTAL EXPENSES", semantics: flow, statement_type: income}
+  - {field: finance_cost,              statement: profit_and_loss, label: "Finance costs", semantics: flow, statement_type: income}
+  - {field: depreciation_amortisation, statement: profit_and_loss, label: "Depreciation and amortisation expense", semantics: flow, statement_type: income}
+  - {field: profit_before_tax,         statement: profit_and_loss, label: "PROFIT BEFORE TAX", semantics: flow, statement_type: income}
+  - {field: tax_expense,               statement: profit_and_loss, label: "TOTAL TAX EXPENSE", semantics: flow, statement_type: income}
+  - {field: profit_after_tax,          statement: profit_and_loss, label: "PROFIT FOR THE YEAR", semantics: flow, statement_type: income}
+
+  # --- balance sheet ---
+  - {field: property_plant_equipment,  statement: balance_sheet, label: "Property, plant and equipment", semantics: stock, statement_type: balance_sheet}
+  - {field: inventories,               statement: balance_sheet, label: "Inventories", semantics: stock, statement_type: balance_sheet}
+  - {field: cash_and_equivalents,      statement: balance_sheet, label: "Cash and cash equivalents", semantics: stock, statement_type: balance_sheet}
+  - {field: trade_receivables_billed,  statement: balance_sheet, label: "Billed", occurrence: 1, semantics: stock, statement_type: balance_sheet}
+  - field: trade_receivables
+    statement: balance_sheet
+    semantics: stock
+    statement_type: balance_sheet
+    sum_of:                       # current billed + current unbilled, as two printed lines
+      - {label: "Billed", occurrence: 1}
+      - {label: "Unbilled", occurrence: 1}
+  - {field: current_assets,            statement: balance_sheet, label: "Total current assets", semantics: stock, statement_type: balance_sheet}
+  - {field: total_assets,              statement: balance_sheet, label: "TOTAL ASSETS", semantics: stock, statement_type: balance_sheet}
+  - {field: total_equity,              statement: balance_sheet, label: "Total equity", semantics: stock, statement_type: balance_sheet}
+  # Reserves and surplus incl. retained earnings. Used only as the stand-in for retained earnings in the Altman Z'' score (J1-16).
+  - {field: other_equity,              statement: balance_sheet, label: "Other equity", semantics: stock, statement_type: balance_sheet}
+  - {field: current_liabilities,       statement: balance_sheet, label: "Total current liabilities", semantics: stock, statement_type: balance_sheet}
+  - field: total_liabilities
+    statement: balance_sheet
+    semantics: stock
+    statement_type: balance_sheet
+    sum_of:
+      - {label: "Total non-current liabilities"}
+      - {label: "Total current liabilities"}
+
+  # --- cash flow ---
+  - {field: cash_flow_from_operations, statement: cash_flow, label: "Net cash flows generated from operating activities", semantics: flow, statement_type: cash_flow}

@@ -1,0 +1,62 @@
+{
+  "extractor_label": "claude-code-session (manual read of the pages; NOT the production API path)",
+  "note": "Findings Claude Code recorded on 2026-10-06 by reading the pages the pipeline selected for the TCS FY2026 annual report. Replayed by RecordedExtractor and put through the same quote verification as a live model call. Re-run with --extractor claude (needs ANTHROPIC_API_KEY) to compare.",
+  "responses": {
+    "J1-10:consolidated:FY2026": {
+      "findings": [
+        {"finding_type": "opinion_unmodified", "page": 158, "confidence": "high",
+         "exact_quote": "the aforesaid consolidated financial statements give the information required by the Companies Act, 2013 ('Act') in the manner so required and give a true and fair view in conformity with the accounting principles generally accepted in India"},
+        {"finding_type": "key_audit_matter", "page": 159, "confidence": "high",
+         "exact_quote": "Revenue recognition-Fixed price contracts where revenue is recognised using percentage of completion method"}
+      ]
+    },
+    "J1-10:standalone:FY2026": {
+      "findings": [
+        {"finding_type": "opinion_unmodified", "page": 240, "confidence": "high",
+         "exact_quote": "the aforesaid standalone financial statements give the information required by the Companies Act, 2013 ('Act') in the manner so required and give a true and fair view in conformity with the accounting principles generally accepted in India"},
+        {"finding_type": "key_audit_matter", "page": 241, "confidence": "high",
+         "exact_quote": "Revenue recognition-Fixed price contracts where revenue is recognised using percentage of completion method"}
+      ]
+    },
+    "J1-11:consolidated:FY2026": {
+      "findings": [
+        {"finding_type": "caro_adverse_or_qualified_answer", "page": 164, "confidence": "low",
+         "exact_quote": "In respect of the following entities the CARO report relating to them has not been issued by its auditor till the date of principal auditor's report"}
+      ]
+    },
+    "J1-11:standalone:FY2026": {
+      "findings": [
+        {"finding_type": "caro_adverse_or_qualified_answer", "page": 246, "confidence": "high",
+         "exact_quote": "in our opinion following instances of loans falling due during year were renewed by fresh loans"},
+        {"finding_type": "caro_adverse_or_qualified_answer", "page": 247, "confidence": "medium",
+         "exact_quote": "there are no statutory dues relating to Goods and Service Tax, Provident Fund, Employees State Insurance, Income-tax, Sales tax, Service tax, Duty of Customs, Value added tax, Cess or other statutory dues which have not been deposited on account of any dispute except for following"}
+      ]
+    },
+    "J1-14:consolidated:FY2026": {
+      "findings": [
+        {"finding_type": "related_party_terms_not_stated", "page": 234, "confidence": "medium",
+         "exact_quote": "Inter-corporate deposits placed - 1,500 - - 1,500"}
+      ]
+    },
+    "J1-14:standalone:FY2026": {
+      "findings": [
+        {"finding_type": "related_party_terms_not_stated", "page": 311, "confidence": "medium",
+         "exact_quote": "Inter-corporate deposits placed - 11 1,500 - - 1,511"},
+        {"finding_type": "related_party_terms_not_stated", "page": 311, "confidence": "medium",
+         "exact_quote": "Guarantees given - 225 - 1 - 226"}
+      ]
+    },
+    "J1-15:consolidated:FY2026": {
+      "findings": [
+        {"finding_type": "adoption_of_new_accounting_standard", "page": 177, "confidence": "high",
+         "exact_quote": "In May 2025, MCA notified amendments to Ind AS 21 - The Effects of Changes in Foreign Exchange Rates, applicable w.e.f. April 1, 2025."}
+      ]
+    },
+    "J1-15:standalone:FY2026": {
+      "findings": [
+        {"finding_type": "adoption_of_new_accounting_standard", "page": 261, "confidence": "high",
+         "exact_quote": "In May 2025, MCA notified amendments to Ind AS 21 - The Effects of Changes in Foreign Exchange Rates, applicable w.e.f. April 1, 2025."}
+      ]
+    }
+  }
+}

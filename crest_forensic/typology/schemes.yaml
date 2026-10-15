@@ -1,0 +1,233 @@
+# Scheme library for Job 3 (fraud-scheme matching), version 1.
+# Written 2026-10-14 by the developer, on the forensic lead's instruction to use the developer's judgement and public sources.
+# Class and branch names follow the PUBLIC ACFE Fraud Tree (three branches: financial statement, corruption, asset misappropriation),
+# checked against public summaries on 2026-10-14. References are by named branch of the tree and by FAIS standard title; NO page numbers are
+# given because the manual and the standards texts themselves were not consulted. The reviewer verifies every reference before use.
+#
+# Wording rules: the tool's OWN text uses `class_label` (never the words the banned-language guard blocks). `acfe_class` is the official
+# branch name and appears only inside the reference text, like a quotation.
+#
+# Indicators:  tool_check = the existing check whose flag counts as a present indicator;
+#              record_tag = a public-record item added by a person (SEBI/SFIO/MCA orders, tribunal rulings, exchange announcements,
+#              credible news) carrying this tag counts as present. Exactly one of the two is set.
+version: 1
+status: in_use
+approved_by: "forensic lead (delegated to the developer by the user, 2026-10-14)"
+approved_at: "2026-10-14"
+
+scoring:
+  rule: "coverage = present indicators / indicators in the scheme; a scheme is ranked only with at least min_present present indicators"
+  min_present: 3
+  counted_flags: "flags a reviewer ACCEPTED; flags labelled not material never count"
+  note: "Both numbers are proposals for the lead to change."
+
+references:
+  acfe_tree: &acfe_tree
+    title: "ACFE Occupational Fraud and Abuse Classification System (the Fraud Tree)"
+    publisher: "Association of Certified Fraud Examiners (public chart on acfe.com)"
+    locator: "BRANCH"
+    verified: "branch names checked against public summaries 2026-10-14; no page numbers"
+  acfe_report: &acfe_report
+    title: "ACFE Occupational Fraud: A Report to the Nations (public report)"
+    publisher: "Association of Certified Fraud Examiners"
+    locator: "scheme definitions and statistics by branch of the Fraud Tree"
+    verified: "named only; edition and page to be added by the reviewer"
+  fais_120: &fais_120
+    title: "ICAI FAIS 120, Understanding Fraud Risk"
+    publisher: "Institute of Chartered Accountants of India, Digital Accounting and Assurance Board"
+    locator: "standard title only"
+    verified: "title confirmed from public ICAI material 2026-10-14; paragraph references to be added by the reviewer"
+  fais_110: &fais_110
+    title: "ICAI FAIS 110, Understanding the Nature of Engagement"
+    publisher: "Institute of Chartered Accountants of India, Digital Accounting and Assurance Board"
+    locator: "standard title only"
+    verified: "title confirmed from public ICAI material 2026-10-14; paragraph references to be added by the reviewer"
+
+schemes:
+  - id: FSF-01
+    acfe_class: "Financial statement fraud > Fictitious revenues; Timing differences"
+    class_label: "Financial statement schemes"
+    scheme_name: "Revenue booked that is not earned, or booked too early"
+    plain_pattern: "Revenue is recorded before it is earned, or not earned at all; the cash does not follow, so receivables and accruals build up."
+    indicators:
+      - {id: i1, text: "Receivables grow much faster than revenue", tool_check: "J1-03"}
+      - {id: i2, text: "Profit is not backed by operating cash flow", tool_check: "J1-01"}
+      - {id: i3, text: "High accruals relative to assets (Sloan)", tool_check: "J1-02"}
+      - {id: i4, text: "Beneish parts for receivables days and sales growth are high", tool_check: "J1-06"}
+      - {id: i5, text: "Revenue recognition is a key audit matter or an emphasis-of-matter paragraph", tool_check: "J1-10"}
+      - {id: i6, text: "The year-end quarter carries a disproportionate share of revenue", record_tag: q4_revenue_concentration}
+      - {id: i7, text: "Restatement of previously reported revenue or receivables", tool_check: "J1-09"}
+    contradicting:
+      - "Receivable days stable or falling while revenue grows"
+      - "Operating cash flow close to or above profit for several years"
+    innocent_explanations:
+      - "Longer credit terms agreed with large customers, or a change in the customer mix"
+      - "Percentage-of-completion contracts, where billing and revenue timing differ by design"
+      - "Seasonality that is stable year after year"
+    evidence_to_confirm:
+      - {text: "Customer-level ageing and confirmations", public: false}
+      - {text: "Contract terms and revenue recognition notes", public: true}
+      - {text: "Cash collected after the year end", public: false}
+    citations:
+      acfe: [{<<: *acfe_tree, locator: "Financial statement fraud: fictitious revenues; timing differences"}, *acfe_report]
+      fais: [*fais_120, *fais_110]
+
+  - id: FSF-02
+    acfe_class: "Financial statement fraud > Improper asset valuations"
+    class_label: "Financial statement schemes"
+    scheme_name: "Assets carried at more than they are worth (receivables, inventory)"
+    plain_pattern: "Assets are carried at more than they are worth, so expenses and losses are put off."
+    indicators:
+      - {id: i1, text: "Inventory grows much faster than revenue", tool_check: "J1-04"}
+      - {id: i2, text: "Receivables grow much faster than revenue", tool_check: "J1-03"}
+      - {id: i3, text: "Restated or re-presented balance sheet figures", tool_check: "J1-09"}
+      - {id: i4, text: "Valuation, impairment or provisioning is a key audit matter", tool_check: "J1-10"}
+      - {id: i5, text: "Change in an accounting estimate (provisioning, useful life, impairment)", tool_check: "J1-15"}
+      - {id: i6, text: "Adverse or qualified answers on records in the audit report annexure", tool_check: "J1-11"}
+    contradicting:
+      - "Inventory is small relative to revenue (the flag is then not material)"
+      - "Provisions and write-offs rise in line with the balances"
+    innocent_explanations:
+      - "Stock build ahead of a launch, a new plant or a supply risk"
+      - "A change in business model, for example from services to products"
+    evidence_to_confirm:
+      - {text: "Stock counts, ageing and write-off policy", public: false}
+      - {text: "Impairment and provisioning notes", public: true}
+    citations:
+      acfe: [{<<: *acfe_tree, locator: "Financial statement fraud: improper asset valuations"}, *acfe_report]
+      fais: [*fais_120, *fais_110]
+
+  - id: FSF-03
+    acfe_class: "Financial statement fraud > Concealed liabilities and expenses; Timing differences"
+    class_label: "Financial statement schemes"
+    scheme_name: "Costs booked as assets, or liabilities left out"
+    plain_pattern: "Running costs are booked as assets, or liabilities are left out, so profit looks higher."
+    indicators:
+      - {id: i1, text: "Non-current assets grow much faster than total expenses", tool_check: "J1-08"}
+      - {id: i2, text: "High asset-quality or depreciation index (Beneish AQI, DEPI)", tool_check: "J1-06"}
+      - {id: i3, text: "High accruals relative to assets", tool_check: "J1-02"}
+      - {id: i4, text: "Change in accounting policy or estimate that raises profit", tool_check: "J1-15"}
+      - {id: i5, text: "Unusually large other income lifting profit", tool_check: "J1-07"}
+      - {id: i6, text: "Contingent liabilities or guarantees growing without explanation", record_tag: contingent_liability_growth}
+    contradicting:
+      - "Growth in assets is explained by an acquisition or by investments disclosed in the notes"
+      - "Capital work in progress is capitalised and then depreciated on schedule"
+    innocent_explanations:
+      - "Genuine capital expenditure or an acquisition"
+      - "Growth in treasury investments, which also lifts non-current assets"
+    evidence_to_confirm:
+      - {text: "Fixed-asset and intangible additions by type", public: true}
+      - {text: "Ledger entries behind capitalised items", public: false}
+    citations:
+      acfe: [{<<: *acfe_tree, locator: "Financial statement fraud: concealed liabilities and expenses; timing differences"}, *acfe_report]
+      fais: [*fais_120, *fais_110]
+
+  - id: FSF-04
+    acfe_class: "Financial statement fraud > Improper disclosures"
+    class_label: "Financial statement schemes"
+    scheme_name: "Missing or poor disclosures"
+    plain_pattern: "Related-party dealings, contingencies, auditor concerns or accounting changes are not disclosed, or are disclosed without the facts needed to judge them."
+    indicators:
+      - {id: i1, text: "Related-party items disclosed without pricing, terms or basis", tool_check: "J1-14"}
+      - {id: i2, text: "Adverse answers in the audit report annexure (loans, statutory dues, related parties)", tool_check: "J1-11"}
+      - {id: i3, text: "Qualified opinion, emphasis of matter or going-concern uncertainty", tool_check: "J1-10"}
+      - {id: i4, text: "Auditor change", tool_check: "J1-12"}
+      - {id: i5, text: "Late filing of results", tool_check: "J1-13"}
+      - {id: i6, text: "Jump in auditor fees", tool_check: "J2-03"}
+      - {id: i7, text: "Auditor resignation, or a company announcement about a disagreement", record_tag: auditor_resignation_or_disagreement}
+    contradicting:
+      - "Unmodified opinion with no emphasis of matter; on-time filings; scheduled auditor rotation"
+    innocent_explanations:
+      - "Terms are not stated because the dealings are on standard group terms or are eliminated on consolidation"
+      - "A scheduled auditor rotation required by law"
+    evidence_to_confirm:
+      - {text: "Related-party agreements and approval records", public: false}
+      - {text: "Exchange announcements on auditor appointment, resignation and reasons", public: true}
+    citations:
+      acfe: [{<<: *acfe_tree, locator: "Financial statement fraud: improper disclosures"}, *acfe_report]
+      fais: [*fais_120, *fais_110]
+
+  - id: FSF-05
+    acfe_class: "Financial statement fraud > Timing differences (net income overstatement)"
+    class_label: "Financial statement schemes"
+    scheme_name: "Earnings smoothing and window dressing through one-offs"
+    plain_pattern: "Gains, reversals or other income are timed to hold reported profit steady or to meet a target."
+    indicators:
+      - {id: i1, text: "Other income is a large or jumping share of profit before tax", tool_check: "J1-07"}
+      - {id: i2, text: "Profit is not backed by operating cash flow", tool_check: "J1-01"}
+      - {id: i3, text: "Change in accounting policy or estimate that moves profit", tool_check: "J1-15"}
+      - {id: i4, text: "Receivables rising while profit meets targets", tool_check: "J1-03"}
+    contradicting:
+      - "Other income is steady and mostly interest on cash balances"
+    innocent_explanations:
+      - "Treasury income that follows the size of cash and investment balances"
+    evidence_to_confirm:
+      - {text: "Components of other income", public: true}
+    citations:
+      acfe: [{<<: *acfe_tree, locator: "Financial statement fraud: timing differences; net income overstatement"}, *acfe_report]
+      fais: [*fais_120, *fais_110]
+
+  - id: AM-01
+    acfe_class: "Asset misappropriation > Fraudulent disbursements (misuse of company funds)"
+    class_label: "Asset misuse schemes"
+    scheme_name: "Company funds moved to promoter-linked parties"
+    plain_pattern: "Cash leaves the company to related entities through loans, deposits or guarantees, while promoters raise money against their own shares."
+    indicators:
+      - {id: i1, text: "Loans, deposits or guarantees to related parties, without stated terms", tool_check: "J1-14"}
+      - {id: i2, text: "Promoter shares pledged at a high level", tool_check: "J2-04"}
+      - {id: i3, text: "Promoter holding stepping down quickly", tool_check: "J2-01"}
+      - {id: i4, text: "Adverse answer in the audit report annexure on loans or related-party compliance", tool_check: "J1-11"}
+      - {id: i5, text: "Cash balances that do not fit the interest income earned", record_tag: cash_interest_mismatch}
+      - {id: i6, text: "Enforcement or tribunal orders about the company or its promoters", record_tag: enforcement_order}
+    contradicting:
+      - "No pledging; promoter holding steady; related-party items small relative to revenue and on disclosed terms"
+    innocent_explanations:
+      - "Intra-group treasury deposits on arm's-length terms, approved by the audit committee"
+    evidence_to_confirm:
+      - {text: "Approval records, interest charged and repayment history", public: false}
+      - {text: "Exchange disclosures of pledge invocation and of related-party transactions", public: true}
+    citations:
+      acfe: [{<<: *acfe_tree, locator: "Asset misappropriation: fraudulent disbursements"}, *acfe_report]
+      fais: [*fais_120, *fais_110]
+
+  - id: COR-01
+    acfe_class: "Corruption > Conflicts of interest"
+    class_label: "Corruption-type schemes"
+    scheme_name: "Undisclosed conflict of interest in related-party dealings"
+    plain_pattern: "Insiders benefit from deals with entities they own or influence, and the link is not made clear."
+    indicators:
+      - {id: i1, text: "Related-party items without stated terms", tool_check: "J1-14"}
+      - {id: i2, text: "Group structure with many related entities relative to the business", record_tag: complex_group_structure}
+      - {id: i3, text: "Adverse answers in the audit report annexure on related parties", tool_check: "J1-11"}
+      - {id: i4, text: "Enforcement or media record naming the company, its promoters or its auditor", record_tag: enforcement_or_media_record}
+    contradicting:
+      - "Related-party dealings are limited to wholly owned subsidiaries and eliminated on consolidation"
+    innocent_explanations:
+      - "A large group where shared services are charged between companies"
+    evidence_to_confirm:
+      - {text: "Related-party register and board approvals", public: false}
+      - {text: "Public enforcement and tribunal records", public: true}
+    citations:
+      acfe: [{<<: *acfe_tree, locator: "Corruption: conflicts of interest"}, *acfe_report]
+      fais: [*fais_120, *fais_110]
+
+  - id: MKT-01
+    acfe_class: "Outside the Fraud Tree (securities-market pattern)"
+    class_label: "Securities-market patterns"
+    scheme_name: "Price or volume moving before results"
+    plain_pattern: "Price or volume moves before results are published, in a way the usual pattern does not explain."
+    indicators:
+      - {id: i1, text: "Unusually large run-up before the results day", tool_check: "J2-02"}
+      - {id: i2, text: "Unusually large price reaction against other results days", tool_check: "J2-02"}
+      - {id: i3, text: "Unusual volume on the reaction day", tool_check: "J2-02"}
+      - {id: i4, text: "Insider trade disclosures near the results", record_tag: insider_trade_disclosure}
+    contradicting:
+      - "Reaction and volume inside the range of the other results days"
+    innocent_explanations:
+      - "Sector news, index rebalancing or a peer's results published just before"
+    evidence_to_confirm:
+      - {text: "Insider trading disclosures filed under SEBI rules", public: true}
+      - {text: "Order and trade records of specific accounts", public: false}
+    citations:
+      acfe: [{<<: *acfe_report, locator: "not a Fraud Tree branch; included as a market pattern for the reviewer to keep or drop"}]
+      fais: [*fais_120]

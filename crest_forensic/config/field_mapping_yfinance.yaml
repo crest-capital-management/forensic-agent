@@ -1,0 +1,93 @@
+# Field mapping: Yahoo Finance (yfinance) line name -> CREST standard field.
+# Line names confirmed against a real TCS.NS response on 2026-10-04.
+#
+# unit_multiplier is 1.0 because Yahoo reports absolute currency units, NOT
+# crore (TCS FY2026 Total Revenue = 2.67e12 = Rs 267,021 crore). The code
+# refuses to normalize a snapshot unless its meta.currency is INR.
+#
+# Only the fields needed to (a) get real operating cash flow and (b)
+# cross-check against the RapidAPI source are mapped. Add more as checks need.
+# VERIFIED 2026-10-05 against the audited TCS annual report 2025-26: every mapped
+# consolidated line below equals the printed figure for FY2026 and FY2025
+# (see `cli check-golden`). Yahoo supplies consolidated figures only.
+mapping_version: 2
+fields:
+  # --- income statement (annual) ---
+  - standard_field: revenue_from_operations
+    statement_type: income
+    semantics: flow
+    source_endpoint: yf_income
+    item_name_contains: "Total Revenue"
+    unit_multiplier: 1.0
+  - standard_field: profit_before_tax
+    statement_type: income
+    semantics: flow
+    source_endpoint: yf_income
+    item_name_contains: "Pretax Income"
+    unit_multiplier: 1.0
+  - standard_field: tax_expense
+    statement_type: income
+    semantics: flow
+    source_endpoint: yf_income
+    item_name_contains: "Tax Provision"
+    unit_multiplier: 1.0
+  # "Net Income Including Noncontrolling Interests" = the printed "Profit for the
+  # year" (consolidated 49,454 / 48,797 cr, AR 2025-26 p168). Plain "Net Income"
+  # excludes minority interest and does not match.
+  - standard_field: profit_after_tax
+    statement_type: income
+    semantics: flow
+    source_endpoint: yf_income
+    item_name_contains: "Net Income Including Noncontrolling Interests"
+    unit_multiplier: 1.0
+
+  # --- balance sheet (annual) ---
+  - standard_field: total_assets
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: yf_balance_sheet
+    item_name_contains: "Total Assets"
+    unit_multiplier: 1.0
+  # Yahoo's "Accounts Receivable" is BILLED current trade receivables only
+  # (consolidated FY2026 57,630 = the printed "Billed" line, AR 2025-26 p167).
+  # MoneyControl's trade_receivables is billed + UNBILLED (67,714). They are
+  # different quantities, so they get different standard fields.
+  - standard_field: trade_receivables_billed
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: yf_balance_sheet
+    item_name_contains: "Accounts Receivable"
+    unit_multiplier: 1.0
+  # Verified equal to the printed totals (AR 2025-26 p167: 1,35,705 and 60,914).
+  - standard_field: current_assets
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: yf_balance_sheet
+    item_name_contains: "Current Assets"
+    unit_multiplier: 1.0
+  - standard_field: current_liabilities
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: yf_balance_sheet
+    item_name_contains: "Current Liabilities"
+    unit_multiplier: 1.0
+  - standard_field: inventories
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: yf_balance_sheet
+    item_name_contains: "Inventory"
+    unit_multiplier: 1.0
+
+  # --- cash flow (annual) — the reason this source exists ---
+  - standard_field: cash_flow_from_operations
+    statement_type: cash_flow
+    semantics: flow
+    source_endpoint: yf_cash_flow
+    item_name_contains: "Operating Cash Flow"
+    unit_multiplier: 1.0
+  - standard_field: depreciation_amortisation
+    statement_type: income
+    semantics: flow
+    source_endpoint: yf_cash_flow
+    item_name_contains: "Depreciation And Amortization"
+    unit_multiplier: 1.0

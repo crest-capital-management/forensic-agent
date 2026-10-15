@@ -1,0 +1,34 @@
+# Model settings for the text-reading tasks (Developer Review 11.1: pin the exact
+# model, prompt and settings; never use an unpinned "latest").
+#
+# A model upgrade must be preceded by a regression run on the golden documents
+# and the prompt-injection tests; change `model` here only after that.
+#
+# The API key is read from the ANTHROPIC_API_KEY environment variable (or .env).
+# It is never stored in this file or in the database.
+model: claude-sonnet-5-5
+max_tokens: 4096
+temperature: 0
+
+# Development extractor (--extractor gemini). Key: GEMINI_API_KEY1 (preferred, the newer free key) or GEMINI_API_KEY in .env.
+gemini:
+  model: gemini-3.5-flash-lite
+  max_tokens: 16384
+  temperature: 0
+  # Tries per request when Gemini answers 5xx (overload). Refused tries probably count against the free 20/day, so keep this low.
+  max_attempts: 2
+
+# Which model's text findings feed the screen and flags (first prefix with a call wins).
+# Others are shown as cross-checks and never counted. Change only with the forensic lead.
+text_source_priority:
+  - claude-code-session
+  - claude
+  - gemini
+
+# The ask-the-agent screen (review app). Provider "auto" = Claude if ANTHROPIC_API_KEY is set, else Gemini.
+# The daily cap counts model REQUESTS (a question can use several) and protects the free Gemini quota of 20/day/model.
+agent:
+  provider: auto
+  max_tool_rounds: 5
+  max_tokens: 4096
+  max_model_calls_per_day: 16

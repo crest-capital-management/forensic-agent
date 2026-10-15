@@ -1,0 +1,27 @@
+# Source precedence policy (Developer Review 3.4). Versioned config, proposal
+# only - the forensic lead should approve before production use.
+#
+# Rules applied by ingestion/resolve.py:
+#   1. A directly-sourced value always beats a derived estimate.
+#   2. If several providers report the same (field, year, basis) and agree
+#      within conflict_tolerance_pct, use the first provider in provider_order.
+#   3. If they disagree by more than the tolerance: NO value is picked. The
+#      result is SOURCE_CONFLICT and every provider's value is kept and logged.
+#
+# version 3 (2026-10-06): the audited annual report itself ranks first. It is the
+# primary official source (Developer Review 12.3: company filings are primary);
+# the two data feeds are secondary and are checked against it.
+#
+# version 2 (2026-10-05), from a check of both feeds against TCS's audited
+# annual report 2025-26 (tests/golden/tcs_golden.yaml, `cli check-golden`):
+#   - yfinance ranks above rapidapi_moneycontrol: all its consolidated figures
+#     matched the report except a definition difference (billed-only receivables,
+#     now its own field).
+#   - tolerance tightened from 0.5% to 0.1%: whole-crore rounding is far below
+#     that, and 0.5% let a real 0.5% definitional gap pass as "agreeing".
+version: 3
+provider_order:
+  - annual_report_pdf
+  - yfinance
+  - rapidapi_moneycontrol
+conflict_tolerance_pct: 0.1

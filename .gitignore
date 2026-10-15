@@ -1,0 +1,48 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+*.db
+*.sqlite
+*.sqlite3
+.pytest_cache/
+*.egg-info/
+.ruff_cache/
+
+# --- added 2026-10-15 before the first GitHub push ---
+# database backups and journals (the real data stays on this PC / the server, never in GitHub)
+*.db.bak*
+*.db-journal
+*.db-wal
+*.db-shm
+# keys: only .env.example (names, no values) is committed
+.env.*
+!.env.example
+# helper-tool folders and scratch files
+.claude/
+.agents/
+.aider-desk/
+.autohand/
+.codeartsdoer/
+.codestudio/
+.commandcode/
+.continue/
+.cortex/
+.goose/
+.grok/
+.zcode/
+# older copies of the lead's Word documents (the current ones are committed)
+*.before-*.docx
+# Node and build output
+node_modules/
+.next/
+# editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+# tool-installed helper skills and generated one-off pages (not part of the project)
+/skills/
+/data/
+skills-lock.json
+SHAREHOLDING_LINKS.html

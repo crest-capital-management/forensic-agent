@@ -1,0 +1,302 @@
+# Field mapping: RapidAPI MoneyControl provider field -> CREST standard field.
+# Standard field names come from the Build Plan, section 5.3.
+#
+# Confirmed against a REAL response (TCS, sc_id="TCS", 2026-09-28 — see
+# snapshots 1-8 in the local DB; do not re-fetch live to re-verify this,
+# quota is exhausted). Key findings that shape this file:
+#
+# 1. /stocks/financials/income is QUARTERLY ONLY (5 periods). No annual P&L
+#    comes from this endpoint.
+# 2. /stocks/financials/cash-flow is MISLABELED — it actually returns an
+#    ANNUAL PROFIT & LOSS statement (20 years, March year-end), not a cash
+#    flow statement. There is no "Cash from Operating Activities" (or
+#    investing/financing) anywhere in it.
+# 3. /stocks/financials/balance-sheet is genuinely annual (20 years, March
+#    year-end) and matches its name.
+# 4. cash_flow_from_operations is NOT AVAILABLE from this provider AT ALL —
+#    confirmed across income, balance-sheet, cash-flow(sic) and ratios
+#    endpoints. This blocks J1-01 (profit vs. CFO gap) and J1-02 (accruals)
+#    as specified — needs a decision (see report to the user / project notes).
+# 5. total_liabilities is intentionally left unmapped: this provider's
+#    "Total Liabilities" field equals Total Assets (it means "total balance
+#    sheet size", not "liabilities excluding equity"). Mapping it directly
+#    to the standard_field of the same name would silently corrupt anything
+#    that assumes total_liabilities + total_equity = total_assets is an
+#    independent check rather than a tautology here.
+# 6. current_borrowings / long_term_borrowings have no current/non-current
+#    split in this provider — only Secured Loans / Unsecured Loans / Total
+#    Debt (undifferentiated). Left unmapped rather than guessed.
+# 7. UNIT CONFIRMED 2026-09-29 as INR crore (unit_multiplier: 1.0e7), via an
+#    independent arithmetic check rather than a plausibility guess: TCS
+#    standalone Q1FY27 (income snapshot 1) reports Net Profit=13,642,
+#    Equity Share Capital=362, and Basic EPS=37.70. The ratios endpoint
+#    (snapshot 7) gives Face Value=Rs 1. If the unit is crore:
+#      shares outstanding = 362 * 1e7 / 1        = 3,620,000,000
+#      implied EPS         = 13,642 * 1e7 / shares = 37.69
+#    which matches the reported 37.70 EPS to within rounding. Any other
+#    multiplier (lakh, absolute) is off by 100x or more. Still worth a
+#    forensic-lead sign-off before this drives Job 2 materiality thresholds,
+#    but this is no longer an open guess.
+# 8. CORRECTION 2026-10-04: "Total Assets" in this provider is capital
+#    employed, not total assets (see the total_assets entry). An earlier
+#    version of this file mapped it directly; that was wrong. Note this is
+#    also why standalone total_assets equalled total_equity every year — it
+#    was never evidence that TCS has no liabilities.
+# 9. VERIFIED AGAINST THE AUDITED ANNUAL REPORT 2025-26 (2026-10-05; PDF pages
+#    167/168/173 consolidated, 253/254/257 standalone). Fields proven to differ
+#    from the printed statements are unmapped rather than fed into checks:
+#    other_income, profit_before_tax (annual), current_assets, current_liabilities.
+#    Verified as matching: revenue, tax, depreciation, trade_receivables
+#    (= billed + unbilled CURRENT receivables, e.g. 57,630 + 10,084 = 67,714),
+#    inventories, standalone profit_after_tax. Known definitional quirks:
+#    consolidated profit_after_tax is "attributable to shareholders" in FY2026
+#    (49,210) but total profit in FY2025 (48,797); total_equity ("Networth") is
+#    equity attributable to shareholders, excluding minority interest.
+#    See tests/golden/tcs_golden.yaml and `cli check-golden`.
+# 10. ANNUAL REPORT AS A SOURCE (2026-10-06): once the audited report was ingested
+#     (provider annual_report_pdf), comparing it with this feed exposed three more
+#     lines whose definition differs from their name, all now unmapped:
+#     property_plant_equipment ("Net Block"), cash_and_equivalents
+#     ("Cash and Bank Balance"), total_expenses. The audited report supplies
+#     these fields for the years it covers.
+mapping_version: 6
+fields:
+  # ============================================================
+  # ANNUAL P&L — physically served by the "cash_flow" endpoint
+  # (see note 2 above). statement_type stays "income" (Build Plan
+  # taxonomy); source_endpoint records where it actually comes from.
+  # ============================================================
+  - standard_field: revenue_from_operations
+    statement_type: income
+    semantics: flow
+    source_endpoint: cash_flow
+    item_name_contains: "Net Sales"
+    unit_multiplier: 1.0e7
+  - standard_field: other_income
+    statement_type: income
+    semantics: flow
+    source_endpoint: cash_flow
+    # DELIBERATELY UNMAPPED (2026-10-05, note 9): does not match the audited annual
+    # report. Consolidated FY2026: provider 244 vs printed 4,402 (244 is the minority
+    # interest profit, not other income); standalone FY2026: 6,174 vs 10,036;
+    # standalone FY2025: 9,507 vs 9,642 (AR 2025-26 pp.168, 254).
+    item_name_contains: null
+    unit_multiplier: null
+  - standard_field: total_expenses
+    statement_type: income
+    semantics: flow
+    source_endpoint: cash_flow
+    # DELIBERATELY UNMAPPED (2026-10-06, note 10): excludes finance cost and depreciation (standalone FY2026: 158,689 + 1,124 + 4,288 = 164,101 = printed TOTAL EXPENSES, AR 2025-26 p254).
+    item_name_contains: null
+    unit_multiplier: null
+  - standard_field: cost_of_materials_or_goods
+    statement_type: income
+    semantics: flow
+    source_endpoint: cash_flow
+    item_name_contains: "Raw Materials"
+    unit_multiplier: 1.0e7
+  - standard_field: depreciation_amortisation
+    statement_type: income
+    semantics: flow
+    source_endpoint: cash_flow
+    item_name_contains: "Depreciation"
+    unit_multiplier: 1.0e7
+  - standard_field: selling_and_admin_expenses
+    statement_type: income
+    semantics: flow
+    source_endpoint: cash_flow
+    item_name_contains: "Selling and Admin Expenses"
+    unit_multiplier: 1.0e7
+  - standard_field: finance_cost
+    statement_type: income
+    semantics: flow
+    source_endpoint: cash_flow
+    item_name_contains: "Interest"
+    unit_multiplier: 1.0e7
+  - standard_field: profit_before_tax
+    statement_type: income
+    semantics: flow
+    source_endpoint: cash_flow
+    # DELIBERATELY UNMAPPED (2026-10-05, note 9): does not match the audited report: consolidated FY2026 65,855 vs printed 65,487; standalone FY2026 63,011 vs 62,806; standalone FY2025 62,513 vs 62,648 (AR 2025-26 pp.168, 254).
+    item_name_contains: null
+    unit_multiplier: null
+  - standard_field: tax_expense
+    statement_type: income
+    semantics: flow
+    source_endpoint: cash_flow
+    item_name_contains: "Tax"
+    unit_multiplier: 1.0e7
+  - standard_field: profit_after_tax
+    statement_type: income
+    semantics: flow
+    source_endpoint: cash_flow
+    item_name_contains: "Reported Net Profit"
+    unit_multiplier: 1.0e7
+    # Standalone only (verified 14/14 vs the audited report). Consolidated, this
+    # is profit ATTRIBUTABLE to shareholders in most years but total profit in
+    # others (FY2026 49,210 vs printed 49,454; FY2025 48,797 = total), so it is
+    # not used for consolidated; Yahoo supplies the verified consolidated figure.
+    bases: [standalone]
+
+  # ============================================================
+  # QUARTERLY P&L — physically served by the "income" endpoint.
+  # Same standard_field names; distinguished from the rows above by
+  # period_type=quarterly (set automatically from source_endpoint).
+  # Useful later for Job 2 quarterly checks, not Job 1's annual checks.
+  # ============================================================
+  - standard_field: revenue_from_operations
+    statement_type: income
+    semantics: flow
+    source_endpoint: income
+    item_name_contains: "Net Sales/Income from operations"
+    unit_multiplier: 1.0e7
+  - standard_field: other_income
+    statement_type: income
+    semantics: flow
+    source_endpoint: income
+    item_name_contains: "Other Income"
+    unit_multiplier: 1.0e7
+  - standard_field: finance_cost
+    statement_type: income
+    semantics: flow
+    source_endpoint: income
+    item_name_contains: "Interest"
+    unit_multiplier: 1.0e7
+  - standard_field: profit_before_tax
+    statement_type: income
+    semantics: flow
+    source_endpoint: income
+    item_name_contains: "P/L Before Tax"
+    unit_multiplier: 1.0e7
+  - standard_field: tax_expense
+    statement_type: income
+    semantics: flow
+    source_endpoint: income
+    item_name_contains: "Tax"
+    unit_multiplier: 1.0e7
+  - standard_field: profit_after_tax
+    statement_type: income
+    semantics: flow
+    source_endpoint: income
+    item_name_contains: "Net Profit/(Loss) For the Period"
+    unit_multiplier: 1.0e7
+
+  # ============================================================
+  # BALANCE SHEET — annual, physically served by "balance_sheet".
+  # ============================================================
+  - standard_field: trade_receivables
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: balance_sheet
+    item_name_contains: "Sundry Debtors"
+    unit_multiplier: 1.0e7
+  - standard_field: inventories
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: balance_sheet
+    item_name_contains: "Inventories"
+    unit_multiplier: 1.0e7
+  - standard_field: cash_and_equivalents
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: balance_sheet
+    # DELIBERATELY UNMAPPED (2026-10-06, note 10): includes bank deposits; printed cash and cash equivalents are 1,833 (standalone FY2026) vs 4,786 here (AR 2025-26 p253).
+    item_name_contains: null
+    unit_multiplier: null
+  - standard_field: current_assets
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: balance_sheet
+    # NOTE: "Total Current Assets" (Inventories+Debtors+Cash only) is also
+    # available and may be the better match — needs forensic-lead call on
+    # which current-assets definition the checks should use.
+    # DELIBERATELY UNMAPPED (2026-10-05, note 9): does not tie to the printed total current assets (consolidated FY2026 114,376 vs 1,35,705; standalone 88,066 vs 1,10,270; AR 2025-26 pp.167, 253).
+    item_name_contains: null
+    unit_multiplier: null
+  - standard_field: property_plant_equipment
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: balance_sheet
+    # DELIBERATELY UNMAPPED (2026-10-06, note 10): this is PPE + right-of-use assets + intangibles (standalone FY2026: 8,259 + 9,245 + 206 = 17,710), not property, plant and equipment (printed 8,259; AR 2025-26 p253). Splicing it with the audited figure would fake a break in the series.
+    item_name_contains: null
+    unit_multiplier: null
+  - standard_field: total_assets
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: balance_sheet
+    # DELIBERATELY UNMAPPED (2026-10-04, note 8 above). This provider's
+    # "Total Assets" line is capital employed (net worth + minority interest +
+    # debt), NOT total assets: for TCS consolidated FY2026 it prints 108,478
+    # while its own "Total CA, Loans and Advances" prints 114,376 — current
+    # assets alone exceeding "total assets" is impossible. Yahoo's real total
+    # assets (182,372 cr) exposed this via the source-conflict check.
+    item_name_contains: null
+    unit_multiplier: null
+  - standard_field: current_liabilities
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: balance_sheet
+    # NOTE: "Current Liabilities" alone (excluding Provisions) is also
+    # available — same forensic-lead call as current_assets above.
+    # DELIBERATELY UNMAPPED (2026-10-05, note 9): this line is TOTAL LIABILITIES (current + non-current), not current liabilities: consolidated FY2026 73,894 = 60,914 current + 12,980 non-current; standalone FY2026 64,592 = 54,960 + 9,632 (AR 2025-26 pp.167, 253).
+    item_name_contains: null
+    unit_multiplier: null
+  - standard_field: current_borrowings
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: balance_sheet
+    item_name_contains: null  # not available — see note 6
+    unit_multiplier: null
+  - standard_field: long_term_borrowings
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: balance_sheet
+    item_name_contains: null  # not available — see note 6
+    unit_multiplier: null
+  - standard_field: total_liabilities
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: balance_sheet
+    item_name_contains: null  # deliberately unmapped — see note 5
+    unit_multiplier: null
+  - standard_field: total_equity
+    statement_type: balance_sheet
+    semantics: stock
+    source_endpoint: balance_sheet
+    item_name_contains: "Networth"
+    unit_multiplier: 1.0e7
+    # "Networth" excludes minority interest, so it is not "total equity" for a
+    # consolidated group (printed 1,08,478 vs 1,07,240). Standalone has none.
+    bases: [standalone]
+
+  # ============================================================
+  # CASH FLOW — genuinely not available from this provider.
+  # ============================================================
+  - standard_field: cash_flow_from_operations
+    statement_type: cash_flow
+    semantics: flow
+    source_endpoint: cash_flow
+    item_name_contains: null  # NOT AVAILABLE — see note 4. This is a real gap.
+    unit_multiplier: null
+
+  # ============================================================
+  # NOTES
+  # ============================================================
+  - standard_field: contingent_liabilities
+    statement_type: notes
+    semantics: stock
+    source_endpoint: balance_sheet
+    item_name_contains: "Contingent Liabilities"
+    unit_multiplier: 1.0e7
+  - standard_field: auditor_fees
+    statement_type: notes
+    semantics: flow
+    source_endpoint: balance_sheet
+    item_name_contains: null  # not available from this provider
+    unit_multiplier: null
+  - standard_field: related_party_transaction_totals
+    statement_type: notes
+    semantics: flow
+    source_endpoint: balance_sheet
+    item_name_contains: null  # not available from this provider
+    unit_multiplier: null

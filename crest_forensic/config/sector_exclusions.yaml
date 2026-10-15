@@ -1,0 +1,14 @@
+# Sector/industry keywords that mark a company UNSUPPORTED_ENTITY_TYPE for V1.
+# Match is case-insensitive substring match against the company's sector/industry
+# field from the provider. Keep this config-driven (Build Plan section 5.4) rather
+# than hardcoded so the forensic lead can adjust it without a code change.
+version: 1
+excluded_sector_keywords:
+  - bank
+  - nbfc
+  - non-banking financial
+  - insurance
+  - insurer
+  - housing finance
+  - asset management
+  - mutual fund

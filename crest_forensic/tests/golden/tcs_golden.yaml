@@ -1,0 +1,96 @@
+# TCS answer key: figures as PRINTED in the audited Integrated Annual Report 2025-26
+# (statutory auditor B S R & Co. LLP; statements signed Mumbai, April 9, 2026).
+#
+# Source document: Documents/Test/AR_TCS_2025-2026.pdf. "pdf" pages are PDF indexes
+# (these match the page numbers in Documents/Test/Notes.xlsx); "printed" is the page
+# number printed on the page. Unit: INR crore, exactly as printed.
+#
+# Extracted by Claude from the PDF text on 2026-10-05 and cross-checked with the
+# identity tests in test_golden.py (PBT - tax = profit, etc.). A human reviewer
+# should still spot-check against the PDF before this is treated as signed off.
+#
+# FY2025 values are the comparative column in the same report. They were also
+# compared with the FY2025 values printed in the FY2024-25 annual report
+# (AR_TCS_2024_2025.pdf) for revenue, other income, profit before tax, tax and
+# profit, and for total assets / current assets / current liabilities: all
+# identical, so TCS did NOT restate FY2025.
+company: TCS
+sc_id: TCS
+unit: INR crore
+source_document: Tata Consultancy Services Integrated Annual Report 2025-26
+pages:
+  consolidated_balance_sheet:    {pdf: 167, printed: 196}
+  consolidated_profit_and_loss:  {pdf: 168, printed: 197}
+  consolidated_cash_flow:        {pdf: 173, printed: 202}
+  standalone_balance_sheet:      {pdf: 253, printed: 282}
+  standalone_profit_and_loss:    {pdf: 254, printed: 283}
+  standalone_cash_flow:          {pdf: 257, printed: 286}
+
+statements:
+  consolidated:
+    FY2026:
+      revenue_from_operations:   {value: 267021, statement: consolidated_profit_and_loss, label: "Revenue from operations"}
+      other_income:              {value: 4402,   statement: consolidated_profit_and_loss, label: "Other income"}
+      profit_before_tax:         {value: 65487,  statement: consolidated_profit_and_loss, label: "PROFIT BEFORE TAX", note: "after exceptional items of 4,526 (1,388 + 2,128 + 1,010)"}
+      tax_expense:               {value: 16033,  statement: consolidated_profit_and_loss, label: "TOTAL TAX EXPENSE"}
+      profit_after_tax:          {value: 49454,  statement: consolidated_profit_and_loss, label: "PROFIT FOR THE YEAR", note: "includes non-controlling interests; attributable to shareholders is 49,210"}
+      depreciation_amortisation: {value: 5560,   statement: consolidated_profit_and_loss, label: "Depreciation and amortisation expense"}
+      cash_flow_from_operations: {value: 52094,  statement: consolidated_cash_flow, label: "Net cash flows generated from operating activities"}
+      trade_receivables:         {value: 67714,  statement: consolidated_balance_sheet, label: "Trade receivables (current): Billed 57,630 + Unbilled 10,084", note: "sum of two printed lines"}
+      trade_receivables_billed:  {value: 57630,  statement: consolidated_balance_sheet, label: "Trade receivables (current) - Billed"}
+      inventories:               {value: 29,     statement: consolidated_balance_sheet, label: "Inventories"}
+      current_assets:            {value: 135705, statement: consolidated_balance_sheet, label: "Total current assets"}
+      total_assets:              {value: 182372, statement: consolidated_balance_sheet, label: "TOTAL ASSETS"}
+      current_liabilities:       {value: 60914,  statement: consolidated_balance_sheet, label: "Total current liabilities"}
+      total_equity:              {value: 108478, statement: consolidated_balance_sheet, label: "Total equity", note: "includes non-controlling interests 1,238; attributable to shareholders is 1,07,240"}
+      other_equity:              {value: 106878, statement: consolidated_balance_sheet, label: "Other equity", note: "added by the developer from the printed balance sheet; please confirm against your own answer key"}
+    FY2025:
+      revenue_from_operations:   {value: 255324, statement: consolidated_profit_and_loss, label: "Revenue from operations"}
+      other_income:              {value: 3962,   statement: consolidated_profit_and_loss, label: "Other income"}
+      profit_before_tax:         {value: 65331,  statement: consolidated_profit_and_loss, label: "PROFIT BEFORE TAX"}
+      tax_expense:               {value: 16534,  statement: consolidated_profit_and_loss, label: "TOTAL TAX EXPENSE"}
+      profit_after_tax:          {value: 48797,  statement: consolidated_profit_and_loss, label: "PROFIT FOR THE YEAR", note: "includes non-controlling interests; attributable to shareholders is 48,553"}
+      depreciation_amortisation: {value: 5242,   statement: consolidated_profit_and_loss, label: "Depreciation and amortisation expense"}
+      cash_flow_from_operations: {value: 48908,  statement: consolidated_cash_flow, label: "Net cash flows generated from operating activities"}
+      trade_receivables:         {value: 59046,  statement: consolidated_balance_sheet, label: "Trade receivables (current): Billed 50,142 + Unbilled 8,904", note: "sum of two printed lines"}
+      trade_receivables_billed:  {value: 50142,  statement: consolidated_balance_sheet, label: "Trade receivables (current) - Billed"}
+      inventories:               {value: 21,     statement: consolidated_balance_sheet, label: "Inventories"}
+      current_assets:            {value: 123011, statement: consolidated_balance_sheet, label: "Total current assets"}
+      total_assets:              {value: 159629, statement: consolidated_balance_sheet, label: "TOTAL ASSETS"}
+      current_liabilities:       {value: 53001,  statement: consolidated_balance_sheet, label: "Total current liabilities"}
+      total_equity:              {value: 95771,  statement: consolidated_balance_sheet, label: "Total equity", note: "includes non-controlling interests 1,015; attributable to shareholders is 94,756"}
+      other_equity:              {value: 94394, statement: consolidated_balance_sheet, label: "Other equity", note: "added by the developer from the printed balance sheet; please confirm against your own answer key"}
+
+  standalone:
+    FY2026:
+      revenue_from_operations:   {value: 220938, statement: standalone_profit_and_loss, label: "Revenue from operations"}
+      other_income:              {value: 10036,  statement: standalone_profit_and_loss, label: "Other income"}
+      profit_before_tax:         {value: 62806,  statement: standalone_profit_and_loss, label: "PROFIT BEFORE TAX", note: "after exceptional items of 4,067 (929 + 2,128 + 1,010)"}
+      tax_expense:               {value: 13710,  statement: standalone_profit_and_loss, label: "TOTAL TAX EXPENSE"}
+      profit_after_tax:          {value: 49096,  statement: standalone_profit_and_loss, label: "PROFIT FOR THE YEAR"}
+      depreciation_amortisation: {value: 4288,   statement: standalone_profit_and_loss, label: "Depreciation and amortisation expense"}
+      cash_flow_from_operations: {value: 45597,  statement: standalone_cash_flow, label: "Net cash flows generated from operating activities"}
+      trade_receivables:         {value: 56976,  statement: standalone_balance_sheet, label: "Trade receivables (current): Billed 48,892 + Unbilled 8,084", note: "sum of two printed lines"}
+      trade_receivables_billed:  {value: 48892,  statement: standalone_balance_sheet, label: "Trade receivables (current) - Billed"}
+      inventories:               {value: 29,     statement: standalone_balance_sheet, label: "Inventories"}
+      current_assets:            {value: 110270, statement: standalone_balance_sheet, label: "Total current assets"}
+      total_assets:              {value: 149268, statement: standalone_balance_sheet, label: "TOTAL ASSETS"}
+      current_liabilities:       {value: 54960,  statement: standalone_balance_sheet, label: "Total current liabilities"}
+      total_equity:              {value: 84676,  statement: standalone_balance_sheet, label: "Total equity"}
+      other_equity:              {value: 84314, statement: standalone_balance_sheet, label: "Other equity", note: "added by the developer from the printed balance sheet; please confirm against your own answer key"}
+    FY2025:
+      revenue_from_operations:   {value: 214853, statement: standalone_profit_and_loss, label: "Revenue from operations"}
+      other_income:              {value: 9642,   statement: standalone_profit_and_loss, label: "Other income"}
+      profit_before_tax:         {value: 62648,  statement: standalone_profit_and_loss, label: "PROFIT BEFORE TAX"}
+      tax_expense:               {value: 14591,  statement: standalone_profit_and_loss, label: "TOTAL TAX EXPENSE"}
+      profit_after_tax:          {value: 48057,  statement: standalone_profit_and_loss, label: "PROFIT FOR THE YEAR"}
+      depreciation_amortisation: {value: 4220,   statement: standalone_profit_and_loss, label: "Depreciation and amortisation expense"}
+      cash_flow_from_operations: {value: 40816,  statement: standalone_cash_flow, label: "Net cash flows generated from operating activities"}
+      trade_receivables:         {value: 51767,  statement: standalone_balance_sheet, label: "Trade receivables (current): Billed 44,392 + Unbilled 7,375", note: "sum of two printed lines"}
+      trade_receivables_billed:  {value: 44392,  statement: standalone_balance_sheet, label: "Trade receivables (current) - Billed"}
+      inventories:               {value: 20,     statement: standalone_balance_sheet, label: "Inventories"}
+      current_assets:            {value: 103163, statement: standalone_balance_sheet, label: "Total current assets"}
+      total_assets:              {value: 132788, statement: standalone_balance_sheet, label: "TOTAL ASSETS"}
+      current_liabilities:       {value: 49182,  statement: standalone_balance_sheet, label: "Total current liabilities"}
+      total_equity:              {value: 75617,  statement: standalone_balance_sheet, label: "Total equity"}
+      other_equity:              {value: 75255, statement: standalone_balance_sheet, label: "Other equity", note: "added by the developer from the printed balance sheet; please confirm against your own answer key"}
